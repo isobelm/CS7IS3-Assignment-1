@@ -2,3 +2,5 @@
 trec_eval
 results/*
 index/*
+notes.numbers
+target/*
