@@ -29,10 +29,11 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.similarities.BM25Similarity;
-import org.apache.lucene.search.similarities.TFIDFSimilarity;
-import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.search.similarities.BooleanSimilarity;
-
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.DFISimilarity;
+import org.apache.lucene.search.similarities.IndependenceStandardized;
+import org.apache.lucene.search.similarities.LMDirichletSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -45,7 +46,9 @@ public class SearchEngine {
 	public enum ScoringAlgorithm {
 		BM25,
 		Classic,
-		Boolean
+		Boolean,
+		LMDirichlet,
+		DFISimilarity
 	}
 
 	private Analyzer analyzer;
@@ -55,6 +58,7 @@ public class SearchEngine {
 
 	public SearchEngine(ScoringAlgorithm algorithm) throws IOException {
 		this.analyzer = new EnglishAnalyzer();
+
 		this.directory = FSDirectory.open(Paths.get(INDEX_DIRECTORY));
 		ireader = DirectoryReader.open(directory);
 
@@ -68,6 +72,10 @@ public class SearchEngine {
 				break;
 			case Boolean:
 				isearcher.setSimilarity(new BooleanSimilarity());
+			case LMDirichlet:
+				isearcher.setSimilarity(new LMDirichletSimilarity());
+			case DFISimilarity:
+				isearcher.setSimilarity(new DFISimilarity(new IndependenceStandardized()));
 				break;
 		}
 	}

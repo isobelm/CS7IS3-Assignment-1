@@ -19,7 +19,6 @@ public class App {
             searchEngine.queryLoop(scanner);
         searchEngine.shutdown();
         scanner.close();
-
     }
 
     static SearchEngine.ScoringAlgorithm selectAlgorithm(Scanner scanner) {
@@ -30,7 +29,9 @@ public class App {
                     "Select scoring method:\n"
                             + "[a]\tClassic Similarity\n"
                             + "[b]\tBM25 Similarity\n"
-                            + "[c]\tBoolean Similarity\n");
+                            + "[c]\tBoolean Similarity\n"
+                            + "[d]\tLM Dirichlet Similarity\n"
+                            + "[e]\tDFI Similarity\n");
             String userResponse = scanner.nextLine();
             switch (userResponse) {
                 case "a":
@@ -42,12 +43,17 @@ public class App {
                 case "c":
                     algorithm = SearchEngine.ScoringAlgorithm.Boolean;
                     break;
+                case "d":
+                    algorithm = SearchEngine.ScoringAlgorithm.LMDirichlet;
+                    break;
+                case "e":
+                    algorithm = SearchEngine.ScoringAlgorithm.DFISimilarity;
+                    break;
                 default:
                     break;
             }
         }
         return algorithm;
-
     }
 
     static boolean shouldRunAllQueries(Scanner scanner) {
@@ -70,10 +76,8 @@ public class App {
                 default:
                     break;
             }
-
         }
         return allQueries;
-
     }
 
 }
