@@ -1,0 +1,5 @@
+To compile and run the code, enter:
+(cd SearchEngine/; mvn package; java -jar target/SearchEngine-1.0.jar ../cran/cran.all.1400 )
+
+To evaluate the output, enter:
+(cd trec_eval/; ./trec_eval  ../cran/cranqrelformat.csv ../results/out.txt )
