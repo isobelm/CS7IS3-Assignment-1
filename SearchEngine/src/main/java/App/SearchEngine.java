@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -28,6 +29,10 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.search.similarities.TFIDFSimilarity;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.BooleanSimilarity;
+
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -37,28 +42,50 @@ public class SearchEngine {
 	private static String RESULTS_FILE = "../results/out.txt";
 	private static String QUERY_FILE = "../cran/cran.qry";
 
+	public enum ScoringAlgorithm {
+		BM25,
+		Classic,
+		Boolean
+	}
+
 	private Analyzer analyzer;
 	private Directory directory;
+	private DirectoryReader ireader;
+	private IndexSearcher isearcher;
 
-	public SearchEngine() throws IOException {
+	public SearchEngine(ScoringAlgorithm algorithm) throws IOException {
 		this.analyzer = new EnglishAnalyzer();
 		this.directory = FSDirectory.open(Paths.get(INDEX_DIRECTORY));
+		ireader = DirectoryReader.open(directory);
+
+		isearcher = new IndexSearcher(ireader);
+		switch (algorithm) {
+			case BM25:
+				isearcher.setSimilarity(new BM25Similarity());
+				break;
+			case Classic:
+				isearcher.setSimilarity(new ClassicSimilarity());
+				break;
+			case Boolean:
+				isearcher.setSimilarity(new BooleanSimilarity());
+				break;
+		}
 	}
 
 	public void buildIndex(String[] args) throws IOException {
 
-		FieldType ft = new FieldType(TextField.TYPE_STORED);
-		ft.setTokenized(true);
-		ft.setStoreTermVectors(true);
-		ft.setStoreTermVectorPositions(true);
-		ft.setStoreTermVectorOffsets(true);
-		ft.setStoreTermVectorPayloads(true);
+		FieldType vectorField = new FieldType(TextField.TYPE_STORED);
+		vectorField.setTokenized(true);
+		vectorField.setStoreTermVectors(true);
+		vectorField.setStoreTermVectorPositions(true);
+		vectorField.setStoreTermVectorOffsets(true);
+		vectorField.setStoreTermVectorPayloads(true);
 
 		IndexWriterConfig config = new IndexWriterConfig(analyzer);
 		config.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
 		IndexWriter iwriter = new IndexWriter(directory, config);
 
-		populateIndex(args, iwriter, ft);
+		populateIndex(args, iwriter, vectorField);
 		iwriter.close();
 	}
 
@@ -106,7 +133,8 @@ public class SearchEngine {
 		return result;
 	}
 
-	public ScoreDoc[] sendQuery(String queryString, IndexSearcher isearcher, boolean print)
+	public ScoreDoc[] sendQuery(String queryString, IndexSearcher isearcher,
+			boolean print)
 			throws ParseException, IOException {
 		List<String> tmpterms = analyze(queryString, analyzer, "content");
 		if (print)
@@ -127,10 +155,6 @@ public class SearchEngine {
 
 	public void runAllQueries()
 			throws IOException, ParseException {
-		DirectoryReader ireader = DirectoryReader.open(directory);
-
-		IndexSearcher isearcher = new IndexSearcher(ireader);
-		isearcher.setSimilarity(new BM25Similarity());
 		PrintWriter writer = new PrintWriter(RESULTS_FILE, "UTF-8");
 
 		String content = new String(Files.readAllBytes(Paths.get(QUERY_FILE)));
@@ -163,6 +187,36 @@ public class SearchEngine {
 		}
 		writer.close();
 
+	}
+
+	public void queryLoop(
+			Scanner scanner)
+			throws IOException, ParseException {
+		boolean shouldQuit = false;
+		String userInput;
+		System.out.println("Type 'q' to quit.");
+
+		while (!shouldQuit) {
+			System.out.print(">>> ");
+			userInput = scanner.nextLine();
+
+			if (userInput.length() > 0) {
+				if (userInput.equals("q")) {
+					shouldQuit = true;
+				} else {
+					ScoreDoc[] hits = sendQuery(userInput, isearcher, false);
+					if (hits.length == 0)
+						System.out.println("Sorry, no documents matched that query.");
+					for (int i = 0; i < hits.length; i++) {
+						Document hitDoc = isearcher.doc(hits[i].doc);
+
+						System.out.println(i + ": " + hitDoc.get("filename"));
+					}
+				}
+				System.out.println();
+
+			}
+		}
 	}
 
 	public void shutdown() throws IOException {
