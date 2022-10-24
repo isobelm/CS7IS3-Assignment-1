@@ -3,6 +3,7 @@ package App;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,15 +56,19 @@ public class SearchEngine {
 	private Directory directory;
 	private DirectoryReader ireader;
 	private IndexSearcher isearcher;
+	private ScoringAlgorithm selectedAlgorithm;
 
 	public SearchEngine(ScoringAlgorithm algorithm) throws IOException {
 		this.analyzer = new EnglishAnalyzer();
-
 		this.directory = FSDirectory.open(Paths.get(INDEX_DIRECTORY));
-		ireader = DirectoryReader.open(directory);
+		this.selectedAlgorithm = algorithm;
 
+	}
+
+	private void createSearcher() throws IOException {
+		ireader = DirectoryReader.open(directory);
 		isearcher = new IndexSearcher(ireader);
-		switch (algorithm) {
+		switch (selectedAlgorithm) {
 			case BM25:
 				isearcher.setSimilarity(new BM25Similarity());
 				break;
@@ -94,7 +99,9 @@ public class SearchEngine {
 		IndexWriter iwriter = new IndexWriter(directory, config);
 
 		populateIndex(args, iwriter, vectorField);
+		System.out.println("close");
 		iwriter.close();
+		createSearcher();
 	}
 
 	private void populateIndex(String[] corpus, IndexWriter iwriter, FieldType ft) {
@@ -141,7 +148,7 @@ public class SearchEngine {
 		return result;
 	}
 
-	public ScoreDoc[] sendQuery(String queryString, IndexSearcher isearcher,
+	public ScoreDoc[] sendQuery(String queryString,
 			boolean print)
 			throws ParseException, IOException {
 		List<String> tmpterms = analyze(queryString, analyzer, "content");
@@ -178,7 +185,7 @@ public class SearchEngine {
 
 				String[] sections = item.split(".W(\r\n|[\r\n])");
 
-				ScoreDoc[] hits = sendQuery(sections[1], isearcher, false);
+				ScoreDoc[] hits = sendQuery(sections[1], false);
 				if (hits.length == 0)
 					System.out.println("fail");
 				for (int i = 0; i < hits.length; i++) {
@@ -212,7 +219,7 @@ public class SearchEngine {
 				if (userInput.equals("q")) {
 					shouldQuit = true;
 				} else {
-					ScoreDoc[] hits = sendQuery(userInput, isearcher, false);
+					ScoreDoc[] hits = sendQuery(userInput, false);
 					if (hits.length == 0)
 						System.out.println("Sorry, no documents matched that query.");
 					for (int i = 0; i < hits.length; i++) {
