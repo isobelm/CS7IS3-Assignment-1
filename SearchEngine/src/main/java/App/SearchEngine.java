@@ -1,5 +1,6 @@
 package App;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -170,6 +171,7 @@ public class SearchEngine {
 
 	public void runAllQueries()
 			throws IOException, ParseException {
+		File Fileright = new File(RESULTS_FILE);
 		PrintWriter writer = new PrintWriter(RESULTS_FILE, "UTF-8");
 
 		String content = new String(Files.readAllBytes(Paths.get(QUERY_FILE)));
