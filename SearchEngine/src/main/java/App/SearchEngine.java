@@ -43,6 +43,7 @@ public class SearchEngine {
 
 	private static String INDEX_DIRECTORY = "../index";
 	private static String RESULTS_FILE = "../results/out.txt";
+	private static String RESULTS_DIR = "../results/";
 	private static String QUERY_FILE = "../cran/cran.qry";
 
 	public enum ScoringAlgorithm {
@@ -171,7 +172,10 @@ public class SearchEngine {
 
 	public void runAllQueries()
 			throws IOException, ParseException {
-		File Fileright = new File(RESULTS_FILE);
+		File outputFile = new File(RESULTS_DIR);
+		if (!outputFile.exists()) {
+			outputFile.mkdir();
+		}
 		PrintWriter writer = new PrintWriter(RESULTS_FILE, "UTF-8");
 
 		String content = new String(Files.readAllBytes(Paths.get(QUERY_FILE)));
